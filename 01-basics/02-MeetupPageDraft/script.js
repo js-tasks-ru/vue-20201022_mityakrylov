@@ -44,23 +44,66 @@ const agendaItemIcons = {
   other: 'cal-sm',
 };
 
+function getDateOnlyString(date) {
+  const YYYY = date.getFullYear();
+  const MM = (date.getMonth() + 1).toString().padStart(2, '0');
+  const DD = date.getDate().toString().padStart(2, '0');
+  return `${YYYY}-${MM}-${DD}`;
+}
+
 export const app = new Vue({
   el: '#app',
 
   data: {
-    //
+    rawMeetup: null,
   },
 
   mounted() {
-    // Требуется получить данные митапа с API
+    this.fetchMeetup();
   },
 
   computed: {
-    //
+    meetup: function () {
+      if (!this.rawMeetup) {
+        return;
+      }
+
+      return {
+        ...this.rawMeetup,
+        cover: this.rawMeetup.imageId
+          ? getMeetupCoverLink(this.rawMeetup)
+          : undefined,
+        localDate: new Date(this.rawMeetup.date).toLocaleString(
+          navigator.language,
+          {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          },
+        ),
+        dateOnlyString: getDateOnlyString(new Date(this.rawMeetup.date)),
+      };
+    },
+    agenda: function () {
+      if (!this.rawMeetup) {
+        return [];
+      }
+
+      return this.rawMeetup.agenda.map((agendaItem) => {
+        return {
+          ...agendaItem,
+          icon: agendaItemIcons[agendaItem.type],
+          title: agendaItem.title || agendaItemTitles[agendaItem.type],
+        };
+      });
+    },
   },
 
   methods: {
-    // Получение данных с API предпочтительнее оформить отдельным методом,
-    // а не писать прямо в mounted()
+    async fetchMeetup() {
+      const response = await fetch(`${API_URL}/meetups/${MEETUP_ID}`);
+      this.rawMeetup = await response.json();
+      this.loaded = true;
+    },
   },
 });
